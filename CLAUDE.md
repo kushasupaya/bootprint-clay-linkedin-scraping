@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Read `handoff.md` first, every session. Decisions and their reasons are in `decisions.md`; per-day logs are in `sessions/`.
+Read `handoff.md` first, every session. Decisions and their reasons are in `decisions.md`; per-day logs are in `sessions/`. `README.md` is the public-facing overview; keep its status table in sync when a feature ships.
 
 ## What this is
 
