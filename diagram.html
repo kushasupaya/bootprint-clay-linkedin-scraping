@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>System Diagram — LinkedIn Job-Change Watchlist</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; max-width: 1200px; margin: 40px auto; padding: 20px; color: #222; }
+    h1 { margin-bottom: 8px; }
+    .subtitle { color: #666; margin-bottom: 16px; }
+    .hint { color: #888; font-size: 13px; margin-bottom: 16px; }
+    .controls { margin-bottom: 12px; display: flex; gap: 8px; }
+    .controls button {
+      padding: 6px 12px; font-size: 13px; cursor: pointer;
+      background: #fff; border: 1px solid #ccc; border-radius: 4px;
+    }
+    .controls button:hover { background: #f0f0f0; }
+    #diagram-container {
+      background: #fafafa; border-radius: 8px; border: 1px solid #eee;
+      height: 75vh; overflow: hidden; position: relative;
+    }
+    #diagram-container svg { width: 100%; height: 100%; display: block; }
+    .mermaid-source { display: none; }
+  </style>
+</head>
+<body>
+  <h1>LinkedIn Job-Change Watchlist</h1>
+  <p class="subtitle">System flow diagram</p>
+  <p class="hint">Scroll to zoom · Drag to pan · Use buttons below to reset</p>
+  <div class="controls">
+    <button onclick="panZoom.zoomIn()">Zoom in</button>
+    <button onclick="panZoom.zoomOut()">Zoom out</button>
+    <button onclick="panZoom.resetZoom(); panZoom.center();">Reset</button>
+    <button onclick="panZoom.fit(); panZoom.center();">Fit to screen</button>
+  </div>
+  <div id="diagram-container"></div>
+
+  <div class="mermaid-source" id="mermaid-source">
+flowchart LR
+  Trigger["Trigger: daily at 10 PM Eastern<br/>(runs when laptop is on)"]
+  Late{"Laptop was closed<br/>at 10 PM?"}
+  LateFlag["Run on next open<br/>label message 'late summary'"]
+
+  subgraph POSTS["Path 1: Posts (free LinkedIn bell emails)"]
+    Emails[("LinkedIn bell emails<br/>for the 5 watched people")]
+    AnyEmails{"Any LinkedIn emails<br/>in last 48 hours?"}
+    Warn["Warning for Slack:<br/>'No LinkedIn emails received.<br/>Check your notification settings.'"]
+    Watched{"From someone on<br/>the watchlist, under 48h old,<br/>not already reported?"}
+    IgnoreP["Ignore<br/>(log the reason)"]
+    Judge{"AI: Is this the person's own<br/>job-change announcement?"}
+    PostJob["Label: Job change<br/>'Today was my last day...'"]
+    PostPoss["Label: Possible move<br/>vague hint or AI unsure"]
+    IgnoreArt["Ignore: shared article,<br/>someone else's job, unrelated<br/>(log the reason)"]
+  end
+
+  subgraph PROFILE["Path 2: Profile changes (Clay)"]
+    Clay[("Clay: current title and company<br/>for the 5 people")]
+    ClayOk{"Clay returned<br/>usable data?"}
+    ClaySkip["Skip this person today<br/>note for Slack:<br/>'Couldn't check Sarah today'<br/>(never call blank a job change)"]
+    Memory[("Local memory file<br/>last-known title and company,<br/>posts already reported")]
+    Compare{"Compare with<br/>saved values"}
+    ProfJob["Label: Job change<br/>company really changed"]
+    ProfPoss["Label: Possible move<br/>title changed, same company"]
+    NoChange["No change<br/>(spelling-only differences ignored)"]
+  end
+
+  Why["AI writes a<br/>'why this matters' line"]
+  Anything{"Anything flagged<br/>or any notes?"}
+  Quiet["Slack DM: 'Nothing today'"]
+  Digest["Build daily summary<br/>Job changes first,<br/>Possible moves in own section,<br/>Clay notes at the bottom"]
+  Slack["Send Slack DM to you"]
+  SlackFail{"Slack send<br/>failed?"}
+  Retry["Retry once;<br/>if still failing, note it in log"]
+  Save["Update memory file<br/>(new values, reported posts)"]
+  You(["YOU review the alert<br/>and decide what to do<br/>(human step)"])
+  Log[("logs/run.log<br/>every email, Clay lookup,<br/>decision + reason (with person name),<br/>Slack send, error")]
+  Page(["Local history page, laptop only<br/>read-only, history by person<br/>(you open it in your browser)"])
+
+  Trigger --> Late
+  Late -- Yes --> LateFlag
+  Late -- No --> Emails
+  LateFlag --> Emails
+  LateFlag --> Clay
+  Late -- No --> Clay
+
+  Emails --> AnyEmails
+  AnyEmails -- "No" --> Warn --> Anything
+  AnyEmails -- Yes --> Watched
+  Watched -- No --> IgnoreP --> Anything
+  Watched -- Yes --> Judge
+  Judge -- "Clear announcement" --> PostJob --> Why
+  Judge -- "Vague / unsure" --> PostPoss --> Why
+  Judge -- "Not a signal" --> IgnoreArt --> Anything
+
+  Clay --> ClayOk
+  ClayOk -- No --> ClaySkip --> Anything
+  ClayOk -- Yes --> Compare
+  Memory --> Compare
+  Compare -- "Company changed" --> ProfJob --> Why
+  Compare -- "Title changed" --> ProfPoss --> Why
+  Compare -- "Same" --> NoChange --> Anything
+
+  Why --> Anything
+  Anything -- "No" --> Quiet --> Save
+  Anything -- "Yes" --> Digest --> Slack
+  Slack --> SlackFail
+  SlackFail -- Yes --> Retry --> Save
+  SlackFail -- No --> Save
+  Save --> Memory
+  Save --> You
+
+  Emails -.-> Log
+  Clay -.-> Log
+  Judge -.-> Log
+  Slack -.-> Log
+  Log -.-> Page
+  Memory -.-> Page
+
+  style You fill:#fff3cd,stroke:#e0a800,stroke-width:2px
+  style Page fill:#fff3cd,stroke:#e0a800,stroke-width:2px
+  style Warn fill:#f8d7da,stroke:#c0392b
+  style ClaySkip fill:#f8d7da,stroke:#c0392b
+  style PostJob fill:#d4edda,stroke:#28a745
+  style ProfJob fill:#d4edda,stroke:#28a745
+  style PostPoss fill:#e2e3f3,stroke:#6c63b5
+  style ProfPoss fill:#e2e3f3,stroke:#6c63b5
+  style Log fill:#eee,stroke:#888
+  style Memory fill:#eee,stroke:#888
+  </div>
+
+  <script>
+    let panZoom;
+    mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
+
+    (async () => {
+      const src = document.getElementById('mermaid-source').textContent;
+      const { svg } = await mermaid.render('rendered-diagram', src);
+      const container = document.getElementById('diagram-container');
+      container.innerHTML = svg;
+      const svgEl = container.querySelector('svg');
+      svgEl.removeAttribute('height');
+      svgEl.removeAttribute('width');
+      svgEl.style.width = '100%';
+      svgEl.style.height = '100%';
+      panZoom = svgPanZoom(svgEl, {
+        zoomEnabled: true,
+        controlIconsEnabled: false,
+        fit: true,
+        center: true,
+        minZoom: 0.2,
+        maxZoom: 10,
+        zoomScaleSensitivity: 0.4
+      });
+      window.addEventListener('resize', () => { panZoom.resize(); panZoom.fit(); panZoom.center(); });
+    })();
+  </script>
+</body>
+</html>

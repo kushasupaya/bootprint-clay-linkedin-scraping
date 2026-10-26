@@ -1,0 +1,45 @@
+# SAMPLE DATA. Format: time | person | source | decision | what happened | link (optional)
+2026-10-21 22:00:01 | - | Run | Info | Run started on time
+2026-10-21 22:00:04 | Sarah Chen | Profile | Info | First run: saved VP of Engineering at Northwind Labs as the starting point
+2026-10-21 22:00:05 | Marcus Okafor | Profile | Info | First run: saved Head of Product at Helio Payments as the starting point
+2026-10-21 22:00:06 | Priya Raman | Profile | Info | First run: saved Senior Director, Design at Fieldnote as the starting point
+2026-10-21 22:00:07 | Daniel Weiss | Profile | Info | First run: saved Chief Revenue Officer at Brightpath Health as the starting point
+2026-10-21 22:00:08 | Elena Kovacs | Profile | Info | First run: saved Director of Hardware at Torque Robotics as the starting point
+2026-10-21 22:00:15 | - | Run | Info | Slack summary sent
+2026-10-21 22:00:16 | - | Run | Info | Run finished
+2026-10-22 22:00:01 | - | Run | Info | Run started on time
+2026-10-22 22:00:03 | Priya Raman | Post | Ignored | Shared an article about hiring trends. Not her own job news. | https://www.linkedin.com/feed/update/sample-1
+2026-10-22 22:00:05 | Sarah Chen | Profile | No change | Company and title match the saved values
+2026-10-22 22:00:06 | Marcus Okafor | Profile | No change | Company and title match the saved values
+2026-10-22 22:00:07 | Priya Raman | Profile | No change | Company and title match the saved values
+2026-10-22 22:00:08 | Daniel Weiss | Profile | No change | Company and title match the saved values
+2026-10-22 22:00:09 | Elena Kovacs | Profile | No change | Company and title match the saved values
+2026-10-22 22:00:14 | - | Run | Info | Slack summary sent: nothing today
+2026-10-22 22:00:15 | - | Run | Info | Run finished
+2026-10-23 22:00:01 | - | Run | Info | Run started on time
+2026-10-23 22:00:03 | Marcus Okafor | Post | Possible move | "Big things ahead. Grateful for everything I learned here." No company named. | https://www.linkedin.com/feed/update/sample-2
+2026-10-23 22:00:05 | Sarah Chen | Profile | No change | Company and title match the saved values
+2026-10-23 22:00:06 | Marcus Okafor | Profile | No change | Company and title match the saved values
+2026-10-23 22:00:07 | Priya Raman | Profile | No change | Company and title match the saved values
+2026-10-23 22:00:08 | Daniel Weiss | Profile | Skipped | Clay returned blank data. Comparison skipped for today.
+2026-10-23 22:00:09 | Elena Kovacs | Profile | No change | Company and title match the saved values
+2026-10-23 22:00:14 | - | Run | Info | Slack summary sent: 1 possible move, 1 profile not checked
+2026-10-23 22:00:15 | - | Run | Info | Run finished
+2026-10-24 22:00:01 | - | Run | Info | Run started on time
+2026-10-24 22:00:03 | Sarah Chen | Post | Job change | "Today was my last day at Northwind Labs. Starting something new next week." | https://www.linkedin.com/feed/update/sample-3
+2026-10-24 22:00:05 | Sarah Chen | Profile | No change | Company and title match the saved values
+2026-10-24 22:00:06 | Marcus Okafor | Profile | No change | Company and title match the saved values
+2026-10-24 22:00:07 | Priya Raman | Profile | Possible move | Title changed from Director, Design to Senior Director, Design. Same company. | https://www.linkedin.com/in/priya-raman-sample
+2026-10-24 22:00:08 | Daniel Weiss | Profile | Skipped | Clay returned an error (out of credits). Comparison skipped for today.
+2026-10-24 22:00:09 | Elena Kovacs | Profile | No change | Company and title match the saved values
+2026-10-24 22:00:14 | - | Run | Info | Slack summary sent: 1 job change, 1 possible move, 1 profile not checked
+2026-10-24 22:00:15 | - | Run | Info | Run finished
+2026-10-25 22:00:01 | - | Run | Info | Run started on time
+2026-10-25 22:00:03 | Sarah Chen | Post | Ignored | Already reported on 2026-10-24. Repeat suppressed. | https://www.linkedin.com/feed/update/sample-3
+2026-10-25 22:00:05 | Sarah Chen | Profile | Job change | Company changed from Northwind Labs to Globex | https://www.linkedin.com/in/sarah-chen-sample
+2026-10-25 22:00:06 | Marcus Okafor | Profile | No change | Company and title match the saved values
+2026-10-25 22:00:07 | Priya Raman | Profile | No change | Company and title match the saved values
+2026-10-25 22:00:08 | Daniel Weiss | Profile | Error | Clay request failed after one retry. Comparison skipped for today.
+2026-10-25 22:00:09 | Elena Kovacs | Profile | No change | Company and title match the saved values
+2026-10-25 22:00:14 | - | Run | Info | Slack summary sent: 1 job change, 1 profile not checked
+2026-10-25 22:00:15 | - | Run | Info | Run finished

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#3d5afe">
+  <title>Watchlist</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="band">
+    <div class="top">
+      <h1>Watchlist</h1>
+      <div class="top-actions">
+        <p class="runinfo" id="runinfo"></p>
+        <button class="refresh" id="refresh" type="button">Check for updates</button>
+      </div>
+    </div>
+    <p class="refresh-status" id="refresh-status" role="status" aria-live="polite"></p>
+  </header>
+
+  <main class="layout" id="layout">
+    <section class="roster" aria-label="People you watch">
+      <label class="search">
+        <span class="sr">Search people</span>
+        <input id="search" type="search" placeholder="Search by name or company" autocomplete="off">
+      </label>
+      <ul class="people" id="people"></ul>
+    </section>
+
+    <section class="case" id="case" aria-live="polite"></section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

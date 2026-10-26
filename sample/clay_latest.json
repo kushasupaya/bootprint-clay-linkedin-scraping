@@ -1,0 +1,7 @@
+[
+  {"name": "Sarah Chen", "company": "Globex Inc.", "title": "VP of Engineering", "linkedin_url": "https://www.linkedin.com/in/sarah-chen-sample/"},
+  {"name": "Marcus Okafor", "company": "Helio Payments", "title": "Head of Product", "linkedin_url": "https://www.linkedin.com/in/marcus-okafor-sample"},
+  {"name": "Priya Raman", "company": "Fieldnote", "title": "VP, Design", "linkedin_url": "https://www.linkedin.com/in/priya-raman-sample"},
+  {"name": "Daniel Weiss", "company": "", "title": "", "linkedin_url": "https://www.linkedin.com/in/daniel-weiss-sample"},
+  {"name": "Someone Else", "company": "Elsewhere", "title": "Analyst", "linkedin_url": "https://www.linkedin.com/in/someone-else-sample"}
+]
