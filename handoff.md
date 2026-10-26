@@ -3,7 +3,7 @@ Last updated: 2026-10-26
 ## Where we are
 Version 1 works locally without Slack. `python3 server.py` shows the history page at http://127.0.0.1:8765 for five real people (light, vivid design; repeated routine checks collapse into one row per day). The "Check for updates" button runs the engine on demand. `python3 engine.py` reads `data/clay_latest.csv`, compares each person with `data/memory.json`, appends to `logs/run.log` and prints a summary. 23 tests pass (`python3 -I -m unittest discover -s tests`).
 
-The data is demo-flavored: the CSV timestamps are random, the stale person is deliberately stale, and one person has a fake title change (a Possible move). Backup of the pre-demo state: `data/backup_before_demo/`. There is no git repo.
+The data is demo-flavored: the CSV timestamps are random, the stale person is deliberately stale, and one person has a fake title change (a Possible move). Backup of the pre-demo state: `data/backup_before_demo/`. Git is set up: `main` is pushed to github.com/kushasupaya/bootprint-clay-linkedin-scraping (first commit d400481).
 
 ## What we did
 - Dropped the LinkedIn posts path (no email option from LinkedIn); Clay is the only signal.
@@ -19,7 +19,7 @@ The data is demo-flavored: the CSV timestamps are random, the stale person is de
 4. Scheduler at 10 PM Eastern with catch-up when the laptop reopens, labeled "late summary".
 5. "No data at all" warning when every row is stale or missing, so a broken Clay refresh isn't a quiet day.
 6. Tune the title/org cleaning from a few days of real logs if false Possible moves appear.
-7. `git init` and push to a private GitHub repo once the user creates it (`.gitignore` excludes `.env`, `logs/`, `data/`, `watchlist.json`).
+7. Keep committing at each milestone. Confirm the GitHub repo is private (I couldn't check; `gh` isn't installed). `.gitignore` excludes `.env`, `logs/`, `data/`, `watchlist.json`; real names are scrubbed from tracked files.
 
 ## Open items and blockers
 - Confirm Clay re-enriches on a daily schedule, the credit cost per refresh, and whether it adds a row per refresh or updates the existing one (the engine handles both).

@@ -36,5 +36,5 @@ The page only reads, with one exception: the "Check for updates" button POSTs `/
 ## Things to know
 
 - `logs/`, `data/` and `watchlist.json` are gitignored (plan requirement) because they hold real people. They now contain the user's five real contacts; the CSV timestamps are random demo values and one person has a fake title change (backup in `data/backup_before_demo/`). Made-up sample data lives in `sample/`.
-- The project is not a git repo yet; the user will create the GitHub repo later.
+- Git: branch `main`, remote `origin` = github.com/kushasupaya/bootprint-clay-linkedin-scraping. Never commit real contact names or employers (tests, docs and examples use made-up ones); `git grep` for the names in `watchlist.json` before committing.
 - Secrets (`.env`, Slack token, Clay and email credentials) must stay out of git; `.gitignore` already covers `.env`.

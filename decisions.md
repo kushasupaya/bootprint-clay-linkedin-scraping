@@ -24,3 +24,7 @@
 - **Repeated routine checks collapse into one row per day.** Consecutive No change, Skipped, Error or Ignored entries become "No change (4 checks)" with a toggle to expand; signals are never collapsed. Chosen over hiding routine checks or deleting log lines, so the full log stays intact (plan: log every decision). This is done on the page only.
 - **The page is no longer purely read-only: a "Check for updates" button runs the engine on demand** (Clay sometimes updates before the 10 PM run). This supersedes the earlier read-only-page decision. Guardrails: one endpoint (`POST /api/refresh`), localhost only, rejects wrong host/origin or a missing custom header so another website can't trigger it, one run at a time, runs are labeled "manual refresh" in the log. Not chosen: a separate CLI-only refresh, which the user didn't want. For now the button re-reads `data/clay_latest.csv`; it will fetch the Google Sheet once that is connected.
 - **Moved `slugify` to `common.py`** so `server.py` can import `engine.py` without a circular import.
+
+## 2026-10-26 (git)
+
+- **Real contact names and employers are kept out of git, including docs and tests.** Docs refer to "one person" and tests use made-up companies; `watchlist.json`, `data/` and `logs/` are gitignored, while `sample/` (made-up) is committed. Chosen because the repo may be visible to others and the plan says candidate data stays local. Not chosen: relying on `.gitignore` alone, since names had leaked into the handoff docs and tests.
