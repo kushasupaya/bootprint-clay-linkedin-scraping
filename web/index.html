@@ -23,6 +23,17 @@
     <p class="refresh-status" id="refresh-status" role="status" aria-live="polite"></p>
   </header>
 
+  <p class="demo-banner" id="demo-banner" hidden>Demo data: made-up job changes. Sending an email here is only simulated; nobody is contacted.</p>
+
+  <section class="demo-panel" id="demo-panel" hidden aria-label="Demo controls">
+    <strong>Demo controls</strong>
+    <select id="demo-person" aria-label="Person"></select>
+    <button class="demo-btn" id="demo-job" type="button">Simulate job change</button>
+    <button class="demo-btn" id="demo-title" type="button">Simulate title change</button>
+    <button class="demo-btn ghost" id="demo-reset" type="button">Reset demo</button>
+    <span class="demo-status" id="demo-status" role="status" aria-live="polite"></span>
+  </section>
+
   <main class="layout" id="layout">
     <section class="roster" aria-label="People you watch">
       <label class="search">

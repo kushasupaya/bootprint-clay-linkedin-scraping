@@ -4,7 +4,7 @@ const caseEl = document.getElementById("case");
 const searchEl = document.getElementById("search");
 const runinfoEl = document.getElementById("runinfo");
 
-const state = { data: null, selected: null, filter: "all", query: "", expanded: new Set() };
+const state = { data: null, selected: null, filter: "all", query: "", expanded: new Set(), drafting: null };
 const refreshBtn = document.getElementById("refresh");
 const refreshStatus = document.getElementById("refresh-status");
 const COLLAPSIBLE = ["No change", "Skipped", "Error", "Ignored"];
@@ -98,7 +98,7 @@ function renderRoster() {
             "div",
             { class: "person-head" },
             el("span", { class: "person-name" }, p.name),
-            sig && el("span", { class: "tag " + toneOf(sig.decision) }, sig.decision)
+            p.brief ? el("span", { class: "tier tier-" + p.brief.tier, title: p.brief.reason }, "Tier " + p.brief.tier) : sig && el("span", { class: "tag " + toneOf(sig.decision) }, sig.decision)
           ),
           el("div", { class: "person-role" }, [p.title, p.company].filter(Boolean).join(" at "))
         )
@@ -171,6 +171,80 @@ function groupNode(group, key) {
   );
 }
 
+// Human-in-the-loop: the draft is a template; nothing is sent until the user edits it and clicks Send.
+function briefCard(p) {
+  const b = p.brief;
+  if (!b) return null;
+  return el(
+    "section",
+    { class: "brief" },
+    el("div", { class: "brief-head" }, el("span", { class: "tier big tier-" + b.tier }, "Tier " + b.tier), el("span", { class: "tag " + toneOf(b.decision) }, b.decision)),
+    el("p", { class: "brief-summary" }, b.summary),
+    el("p", { class: "brief-reason" }, b.reason)
+  );
+}
+
+function outreachPanel(p) {
+  const o = p.outreach;
+  if (!o) return null;
+  const open = state.drafting === p.slug;
+  const head = el("h3", { class: "outreach-title" }, "Email this person");
+  if (o.sent_at) {
+    return el("section", { class: "outreach" }, head, el("p", { class: "outreach-note" }, `Email sent ${fmtDay(o.sent_at.slice(0, 10))} at ${fmtTime(o.sent_at)}.`));
+  }
+  if (!o.to) {
+    return el("section", { class: "outreach" }, head, el("p", { class: "outreach-note" }, "No email address from Clay yet. Add an Email column to the Clay sheet and re-run the check."));
+  }
+  if (!open) {
+    return el(
+      "section",
+      { class: "outreach" },
+      head,
+      el("p", { class: "outreach-note" }, `Draft a note to ${o.to}. You review and edit it first; nothing is sent until you click Send.`),
+      el("button", { class: "primary", type: "button", onclick: () => { state.drafting = p.slug; renderCase(); } }, "Review draft")
+    );
+  }
+  const subject = el("input", { id: "mail-subject", type: "text", value: o.subject, maxlength: "200" });
+  const body = el("textarea", { id: "mail-body", rows: "11" }, o.body);
+  const status = el("p", { class: "outreach-status", role: "status", "aria-live": "polite" });
+  const send = el("button", { class: "primary", type: "button" }, "Send email");
+  send.addEventListener("click", async () => {
+    if (!o.can_send) { status.textContent = "Email isn't set up. Add GMAIL_ADDRESS and GMAIL_APP_PASSWORD to .env and restart the server."; status.className = "outreach-status bad"; return; }
+    if (!window.confirm(`Send this email to ${o.to}?`)) return;
+    send.disabled = true;
+    send.textContent = "Sending\u2026";
+    status.textContent = "";
+    try {
+      const res = await fetch("/api/outreach/send", {
+        method: "POST",
+        headers: { "X-Requested-With": "watchlist-page", "Content-Type": "application/json" },
+        body: JSON.stringify({ slug: p.slug, subject: subject.value, body: body.value }),
+      });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok || !out.ok) throw new Error(out.error || "Sending failed. Nothing was sent.");
+      state.drafting = null;
+      await loadData();
+      renderRoster();
+      renderCase();
+    } catch (err) {
+      status.textContent = err.message;
+      status.className = "outreach-status bad";
+      send.disabled = false;
+      send.textContent = "Send email";
+    }
+  });
+  return el(
+    "section",
+    { class: "outreach" },
+    head,
+    el("label", { class: "field" }, el("span", {}, "To"), el("input", { type: "text", value: o.to, readonly: "readonly" })),
+    el("label", { class: "field" }, el("span", {}, "Subject"), subject),
+    el("label", { class: "field" }, el("span", {}, "Message"), body),
+    el("div", { class: "outreach-actions" }, send, el("button", { class: "ghost", type: "button", onclick: () => { state.drafting = null; renderCase(); } }, "Cancel")),
+    status
+  );
+}
+
 function renderCase() {
   const p = state.data.people.find((x) => x.slug === state.selected);
   caseEl.replaceChildren();
@@ -210,6 +284,7 @@ function renderCase() {
       p.data_as_of && el("span", {}, `Clay data from ${parseTime(p.data_as_of + ":00").toLocaleDateString(undefined, { month: "short", day: "numeric" })}, ${fmtTime(p.data_as_of + ":00")}`),
       p.linkedin_url && el("a", { href: p.linkedin_url, target: "_blank", rel: "noopener noreferrer" }, "LinkedIn profile")
     ),
+    ...[briefCard(p), outreachPanel(p)].filter(Boolean),
     el("div", { class: "filters", role: "group", "aria-label": "Filter history" }, filters)
   );
 
@@ -248,6 +323,7 @@ function renderCase() {
 function select(slug, openCase) {
   state.selected = slug;
   state.filter = "all";
+  state.drafting = null;
   if (openCase) layout.dataset.view = "case";
   renderRoster();
   renderCase();
@@ -299,6 +375,56 @@ async function refresh() {
   }
 }
 
+// Demo mode only: fake a new move for someone, or reset, so the page can be shown reacting.
+function setupDemo() {
+  const panel = document.getElementById("demo-panel");
+  panel.hidden = false;
+  const personSelect = document.getElementById("demo-person");
+  const status = document.getElementById("demo-status");
+  personSelect.replaceChildren(...state.data.people.map((p) => el("option", { value: p.slug }, p.name)));
+  const buttons = [...panel.querySelectorAll("button")];
+  async function act(url, body, done) {
+    buttons.forEach((b) => (b.disabled = true));
+    status.textContent = "";
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "X-Requested-With": "watchlist-page", "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok || !out.ok) throw new Error(out.error || "That didn't work.");
+      await loadData();
+      personSelect.replaceChildren(...state.data.people.map((p) => el("option", { value: p.slug }, p.name)));
+      renderRunInfo();
+      done(out);
+    } catch (err) {
+      status.textContent = err.message;
+    } finally {
+      buttons.forEach((b) => (b.disabled = false));
+    }
+  }
+  const simulate = (kind) => () => {
+    const slug = personSelect.value;
+    act("/api/demo/simulate", { slug, kind }, (out) => {
+      personSelect.value = slug;
+      status.textContent = `${out.name}: new ${out.decision}.`;
+      select(slug, true);
+    });
+  };
+  document.getElementById("demo-job").addEventListener("click", simulate("job"));
+  document.getElementById("demo-title").addEventListener("click", simulate("title"));
+  document.getElementById("demo-reset").addEventListener("click", () => {
+    if (!window.confirm("Reset the demo to its starting state?")) return;
+    act("/api/demo/reset", {}, () => {
+      status.textContent = "Demo reset.";
+      state.selected = (state.data.people.find((p) => p.latest_signal) || state.data.people[0]).slug;
+      renderRoster();
+      renderCase();
+    });
+  });
+}
+
 async function init() {
   layout.dataset.view = "roster";
   refreshBtn.addEventListener("click", refresh);
@@ -316,6 +442,10 @@ async function init() {
     );
     return;
   }
+  const banner = document.getElementById("demo-banner");
+  banner.textContent = state.data.banner;
+  banner.hidden = !state.data.banner;
+  if (state.data.demo) setupDemo();
   renderRunInfo();
   const flagged = state.data.people.find((p) => p.latest_signal);
   state.selected = (flagged || state.data.people[0]).slug;
