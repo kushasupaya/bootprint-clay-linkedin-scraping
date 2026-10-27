@@ -122,13 +122,11 @@ a { color: inherit; }
 .tag.job { background: var(--job); color: #fff; }
 .tag.maybe { background: var(--maybe); color: #fff; }
 
-/* The 14-day strip: one tick per day, coloured by the strongest decision */
-.strip { display: flex; gap: 3px; margin-top: 10px; align-items: flex-end; height: 16px; }
-.tick { flex: 1; height: 6px; border-radius: 2px; background: var(--idle); opacity: 0.7; }
-.tick.seen { height: 10px; background: var(--accent); opacity: 1; }
-.tick.job { height: 16px; background: var(--job); opacity: 1; }
-.tick.maybe { height: 16px; background: var(--maybe); opacity: 1; }
-.tick.err { height: 12px; background: var(--err); opacity: 1; }
+/* The 14-day strip: one small tick per day. Neutral, with days that had a signal a shade darker. */
+.strip { display: flex; gap: 3px; margin-top: 8px; align-items: center; height: 6px; }
+.tick { flex: 1; height: 3px; border-radius: 2px; background: var(--line-soft); }
+.tick.seen, .tick.err { background: var(--line); }
+.tick.job, .tick.maybe { height: 5px; background: var(--muted); opacity: 0.55; }
 
 /* Case file */
 .case {
@@ -193,12 +191,6 @@ a { color: inherit; }
 /* Empty and error states */
 .empty { color: var(--muted); max-width: 52ch; }
 .empty strong { color: var(--ink); display: block; font-size: 17px; margin-bottom: 4px; }
-
-/* Entry: one orchestrated moment, the strips fill in */
-@media (prefers-reduced-motion: no-preference) {
-  .tick { animation: rise 420ms cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i) * 18ms); transform-origin: bottom; }
-  @keyframes rise { from { transform: scaleY(0.2); opacity: 0; } }
-}
 
 /* Narrow screens: roster first, tapping a person opens the case file */
 @media (max-width: 820px) {
@@ -266,3 +258,61 @@ a { color: inherit; }
   .top-actions { width: 100%; justify-content: space-between; margin-top: 8px; }
   .refresh-status { padding: 0 16px; }
 }
+
+/* Outreach email: review and approve before anything is sent */
+.outreach {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin: 16px 0;
+}
+.outreach-title { margin: 0 0 6px; font-size: 16px; letter-spacing: -0.01em; }
+.outreach-note { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
+.field { display: block; margin-bottom: 12px; }
+.field > span { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+.field input, .field textarea {
+  width: 100%;
+  font: inherit;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.field textarea { resize: vertical; line-height: 1.5; }
+.field input[readonly] { background: var(--bg); color: var(--muted); }
+.field input:focus-visible, .field textarea:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.outreach-actions { display: flex; gap: 10px; align-items: center; }
+.primary, .ghost { font: inherit; font-weight: 700; border-radius: 99px; padding: 8px 18px; cursor: pointer; }
+.primary { background: var(--accent); color: var(--accent-ink); border: 0; }
+.primary:hover { background: #2f49d9; }
+.primary[disabled] { opacity: 0.7; cursor: progress; }
+.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+.ghost:hover { background: var(--bg); }
+.primary:focus-visible, .ghost:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.outreach-status { margin: 10px 0 0; font-size: 14px; font-weight: 600; min-height: 0; }
+.outreach-status.bad { color: var(--err); }
+
+/* Priority tier and candidate brief */
+.tier { font-size: 12px; font-weight: 800; border-radius: 99px; padding: 2px 9px; letter-spacing: 0.02em; white-space: nowrap; }
+.tier.big { font-size: 13px; padding: 3px 12px; }
+.tier-A { background: var(--job); color: #fff; }
+.tier-B { background: var(--maybe-bg); color: var(--maybe); }
+.tier-C { background: var(--line-soft); color: var(--muted); }
+.brief { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: var(--radius); padding: 14px 18px; margin: 16px 0; }
+.brief-head { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.brief-summary { margin: 0 0 6px; font-weight: 600; }
+.brief-reason { margin: 0; color: var(--muted); font-size: 14px; }
+
+.demo-banner { margin: 0; padding: 8px 24px; background: #fff3c4; color: #5c4400; font-weight: 600; font-size: 14px; text-align: center; }
+.demo-banner[hidden] { display: none; }
+
+.demo-panel { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; max-width: 1180px; margin: 12px auto 0; padding: 10px 24px; }
+.demo-panel[hidden] { display: none; }
+.demo-panel select { font: inherit; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); }
+.demo-btn { font: inherit; font-weight: 700; border-radius: 99px; padding: 7px 16px; cursor: pointer; background: var(--accent); color: var(--accent-ink); border: 0; }
+.demo-btn.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+.demo-btn[disabled] { opacity: 0.6; cursor: progress; }
+.demo-btn:focus-visible, .demo-panel select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.demo-status { font-size: 14px; font-weight: 600; color: var(--maybe); }

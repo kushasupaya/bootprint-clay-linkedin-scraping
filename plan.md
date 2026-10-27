@@ -47,7 +47,7 @@ Notes on the data:
   - Posts older than 48 hours are ignored.
   - A post already reported is not reported again. Repeats should stop; the log shows when one was suppressed.
   - A single profile or post can produce both a post signal and a profile-change signal; show them together under the person's name.
-- **Human-in-the-loop:** none needed. The system only reads email and Clay data and sends a private Slack message to the user. The user is the review step, deciding what to do with each alert. If automatic outreach to candidates is ever added, it needs an approval gate first.
+- **Human-in-the-loop (added 2026-10-27):** outbound email to a person who has moved. The system drafts a congratulate-and-reach-out email from a template, shows it to the user, and sends only after the user edits it and clicks Send. This works on the history page now and in Slack later (an approve button on the alert). The recipient's address comes from Clay. Never send automatically; one email per signal.
 
 ## Output
 - **Produces:**
@@ -56,7 +56,7 @@ Notes on the data:
     - Broken-pipe day: if no LinkedIn emails arrive for 48 hours, a warning: "No LinkedIn emails received. Check your notification settings."
     - Clay problem: a line such as "Couldn't check Sarah's profile today."
     - Late run: the message says it is a late summary.
-  - **A local history page (read-only), version 1.** A page that opens in the browser on the user's laptop only, showing history **by person**: current title and company, when they were last checked, and a timeline of every post seen and every profile change, with what the system decided and why (including skipped items). It never changes anything.
+  - **A local history page (read-only), version 1.** A page that opens in the browser on the user's laptop only, showing history **by person**: current title and company, when they were last checked, and a timeline of every post seen and every profile change, with what the system decided and why (including skipped items). Its only actions are the manual refresh and the approved outreach email.
 - **Consumer:** the user — Slack direct message to themselves, and the local page on their own laptop. No one else can see either.
 - **Storage:**
   - A small local memory file (last-known title and company per person, date checked, posts already reported).
@@ -76,7 +76,7 @@ Notes on the data:
 - **Why:** in version one, this is the single best tool for debugging when something goes wrong, and for tuning how strict the system is
 
 ## High-Stakes Actions & Approval Gates
-None — this system is read-only. It reads LinkedIn notification emails and Clay data, and sends a private Slack message to the user only. It does not contact candidates, change anything on LinkedIn, or edit any records in Clay or elsewhere. The local history page is read-only too.
+**Outbound email to a watched person is gated.** The only action that contacts a candidate is the outreach email, and it requires the user to review the draft and click Send on the page (Slack approval later). The rest is read-only: it reads Clay data, sends a private Slack message to the user, and does not change anything on LinkedIn or edit records in Clay or elsewhere.
 
 ## System Edges
 - **Edge 1:** The laptop is closed at 10 PM → the system runs when the laptop next opens, and the message is labeled as a late summary.

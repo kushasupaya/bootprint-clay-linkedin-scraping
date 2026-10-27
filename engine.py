@@ -165,6 +165,7 @@ COLUMN_ALIASES = {
     "linkedin_url": ("linkedin_url", "linkedin url", "linkedin", "linkedin profile", "profile url", "url"),
     "enriched_at": ("enriched_at", "enriched at", "last enriched", "last updated", "updated at", "timestamp", "date"),
     "error": ("error", "status error"),
+    "email": ("email", "email address", "work email", "personal email", "e-mail"),
 }
 
 
@@ -259,6 +260,10 @@ def run(root, clay_path, trigger="scheduled"):
         decision, detail, new_mem = evaluate(by_url.get(normalize_url(url)), memory.get(slug), now)
         log.write(name, "Profile", decision, detail, url if decision in SIGNALS else "")
         if new_mem is not None:
+            # Contact email (for outreach) comes from Clay; a blank one never erases a saved one.
+            email = ((by_url.get(normalize_url(url)) or {}).get("email") or "").strip() or memory.get(slug, {}).get("email", "")
+            if email:
+                new_mem["email"] = email
             memory[slug] = {**new_mem, "last_checked": now.strftime("%Y-%m-%d %H:%M")}
         if decision in SIGNALS:
             flagged.append((name, decision, detail, url))

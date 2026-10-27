@@ -1,29 +1,29 @@
-Last updated: 2026-10-26
+Last updated: 2026-10-27
 
 ## Where we are
-Version 1 works locally without Slack. `python3 server.py` shows the history page at http://127.0.0.1:8765 for five real people (light, vivid design; repeated routine checks collapse into one row per day). The "Check for updates" button runs the engine on demand. `python3 engine.py` reads `data/clay_latest.csv`, compares each person with `data/memory.json`, appends to `logs/run.log` and prints a summary. 23 tests pass (`python3 -I -m unittest discover -s tests`).
-
-The data is demo-flavored: the CSV timestamps are random, the stale person is deliberately stale, and one person has a fake title change (a Possible move). Backup of the pre-demo state: `data/backup_before_demo/`. Git is set up: `main` is on github.com/kushasupaya/bootprint-clay-linkedin-scraping with the code, tests, docs and a `README.md`. Handoff updates are pushed on a branch (see open items).
+Version 1 runs locally without Slack. `python3 server.py` serves the real history page at http://127.0.0.1:8765 for the user's ten real contacts (loaded from their `clay_new.csv`, now `data/clay_latest.csv`; no signals yet, 9 of 10 have an email). On top of the history page and engine there are now:
+- Candidate brief and A/B/C tier (`brief.py`); roster sorted Tier A first.
+- Human-approved outreach email (`outreach.py`, "Email this person" panel): editable template, confirm dialog, one email per signal, Gmail SMTP. **Never sent a real email yet: no `.env` exists.**
+- `python3 demo.py` (port 8766): 17 people (10 real names with invented moves, 7 invented), simulated sending, Demo controls to simulate a job/title change or reset, two live finds on "Check for updates".
+- `python3 testmode.py` (port 8767): 4 invented candidates (A, A, B, C) with real Gmail sending, but only to the user's own inbox via `+name` aliases. Needs `.env`.
+41 tests pass (`python3 -I -m unittest discover -s tests`). Pages were verified with jsdom and curl, not a real browser.
 
 ## What we did
-- Dropped the LinkedIn posts path (no email option from LinkedIn); Clay is the only signal.
-- Built the comparison engine, CSV input, Clay timestamps, title/org cleaning and tests.
-- Loaded the user's five real contacts; archived made-up samples in `sample/`.
-- Redesigned the page, collapsed repeated checks, added the guarded refresh button.
-- Updated `CLAUDE.md`, `decisions.md`, `.gitignore`; set up git and pushed; scrubbed real names from tracked files; wrote `README.md`.
+- Outreach email with approval gate; briefs and tiers; new Clay CSV loaded; demo and test modes; fixed the "nullnull" bug (null passed to DOM append); made the activity strip subtle.
+- Cleaned real data: restored one person's real title, removed a leftover fake signal from the real log (backups in `data/backup_before_clay_new/`).
+- Updated CLAUDE.md, plan.md, decisions.md, README status table, session log `sessions/2026-10-27.md`.
 
 ## What's next
-1. Replace the demo CSV (random timestamps, fake title change) with a real export from the Clay-filled sheet, or restore from `data/backup_before_demo/`, and re-run the engine.
-2. Read the Google Sheet directly (read-only service account, key file kept out of git). The refresh button should fetch the sheet first, then run the engine.
-3. Slack daily digest: build it from the whole day's Job change/Possible move log lines, not just the last run, because a manual refresh updates memory and would hide the change at 10 PM. Job changes first, possible moves in their own section, "Couldn't check X's profile today" notes, "nothing today" on quiet days, retry once on failure and log it. Needs a bot token and member ID in `.env`.
-4. Scheduler at 10 PM Eastern with catch-up when the laptop reopens, labeled "late summary".
-5. "No data at all" warning when every row is stale or missing, so a broken Clay refresh isn't a quiet day.
-6. Tune the title/org cleaning from a few days of real logs if false Possible moves appear.
-7. Merge the handoff branch into `main` (or tell me to push straight to `main` in future), keep committing at each milestone, and keep the README status table current. Confirm the GitHub repo is private (I couldn't check; `gh` isn't installed). `.gitignore` excludes `.env`, `logs/`, `data/`, `watchlist.json`; real names are scrubbed from tracked files.
+1. Create `.env` (copy `.env.example`: Gmail address, app password, sender name), run `python3 testmode.py`, send an email to yourself for Avery Stone and confirm it arrives, the panel shows "Email sent", and she drops below Jordan in the list.
+2. Look at all three pages in a real browser (real 8765, demo 8766, test 8767), especially the brief card, email panel, Demo controls and the subtle strip.
+3. Fix the Clay export: re-add a "Last Enriched" column (the 48h stale check is off without it), fill the one blank email, confirm one person's LinkedIn URL (its slug doesn't match their name), and check why several emails use another company's domain than the listed org.
+4. Read the Google Sheet directly (read-only service account, key outside git); the refresh button fetches the sheet first, then runs the engine.
+5. Slack daily digest built from the whole day's log lines (Job changes first, Possible moves separate, "Couldn't check X" notes, "nothing today", retry once), plus an approval button for outreach reusing `outreach.py`. Needs a personal Slack workspace, bot token (`chat:write`, `im:write`) and member ID in `.env`.
+6. Scheduler at 10 PM Eastern with catch-up ("late summary"); "no data at all" warning when every row is stale or missing.
+7. Tune title/org cleaning and the tier rule from real logs (tiers are recency-only; ask whether to weigh seniority or specialty).
 
 ## Open items and blockers
-- The user must confirm the GitHub repo is private (I could not check). README claims Python 3.9+ but was only run on 3.11.
-- Confirm Clay re-enriches on a daily schedule, the credit cost per refresh, and whether it adds a row per refresh or updates the existing one (the engine handles both).
-- Slack: needs a personal free workspace, bot token (`chat:write`, `im:write`) and member ID.
-- The new page features were not checked visually by the assistant; the user should confirm the collapsed rows and refresh button look right.
-- Posts path stays parked unless Clay can return post text.
+- User must confirm the GitHub repo is private (`gh` isn't installed here). README claims Python 3.9+ but only 3.11 was run.
+- Confirm Clay re-enriches daily, credit cost per refresh, and whether it adds a row or updates one (the engine handles both).
+- Before presenting, re-run `python3 demo.py` so ages and tiers are fresh (the live-find trick works once per build).
+- The branch is `handoff-2026-10-26`; merge into `main` when ready. Never commit real contact names (`git grep` the names in `watchlist.json` first); `demo/`, `testmode/`, `.env`, `data/`, `logs/` are gitignored.
