@@ -5,4 +5,6 @@ data/
 .DS_Store
 __pycache__/
 watchlist.json
+demo/
+testmode/
 !sample/watchlist.json
