@@ -10,6 +10,11 @@ Every day it compares each person's current company and job title, supplied by [
 | --- | --- |
 | Comparison engine (`engine.py`) | Working, reads a Clay CSV export |
 | History page with "Check for updates" button | Working |
+| Demo mode with made-up job changes and simulate buttons (`python3 demo.py`) | Working |
+| Test mode: 4 invented candidates, real emails to your own inbox (`python3 testmode.py`) | Working, needs `.env` |
+| Candidate brief and A/B/C priority tier on the page | Working |
+| Outreach email from the page (you review, edit and click Send; Gmail SMTP) | Working, needs an Email column in Clay and `.env` |
+| Outreach approval in Slack | Not built |
 | Reading the Google Sheet live | Not built |
 | Slack daily summary | Not built |
 | 10 PM Eastern scheduler | Not built |
