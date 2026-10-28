@@ -46,3 +46,9 @@
 ## 2026-10-27 (git history)
 
 - **Six focused commits, pushed to a new branch instead of force-pushing (2026-10-27).** The user asked for proper commit messages after the work had been pushed as one commit. Rewrote local history into six commits grouped by file (server and page changes could not be split by hunk without interactive staging), then pushed to `handoff-2026-10-27`. Not chosen: `--force-with-lease` over `handoff-2026-10-26`, which was blocked and would rewrite a branch already on GitHub; the user can approve it later, or just delete the old branch.
+
+## 2026-10-28 (Slack digest)
+
+- **The digest is built from the log, anchored on the last sent digest (2026-10-28).** `digest.py` includes every signal logged after the last `Slack | Info | Sent daily digest` line. This makes "reported signals never repeat" and "a failed send is retried" both fall out of one rule, and covers signals found by manual refreshes during the day. Not chosen: using only the engine's return value from the current run (a failed send, or a manual refresh earlier in the day, would silently drop the signal from Slack).
+- **Bot token + member ID, plain `urllib`, no Slack SDK (2026-10-28).** Matches the stdlib-only rule. A bot DMs a user by posting to their member ID with `chat:write`. Not chosen: an incoming webhook (can't DM a person, only a channel), or Socket Mode/interactivity (needed only for the approve button, which is not built).
+- **The digest does not mention emailing from Slack.** It links to the local history page for drafting and sending. Slack approval of outreach stays unbuilt.

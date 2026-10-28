@@ -16,7 +16,7 @@ Every day it compares each person's current company and job title, supplied by [
 | Outreach email from the page (you review, edit and click Send; Gmail SMTP) | Working, needs an Email column in Clay and `.env` |
 | Outreach approval in Slack | Not built |
 | Reading the Google Sheet live | Not built |
-| Slack daily summary | Not built |
+| Slack daily summary | Built, untested against real Slack (`python3 digest.py`; needs a Slack app token in `.env`) |
 | 10 PM Eastern scheduler | Not built |
 | LinkedIn post announcements | Parked. LinkedIn has no email option for these notifications, so job changes come from Clay only. |
 

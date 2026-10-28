@@ -16,8 +16,8 @@ MAX_BODY = 5000
 EMAIL_RE = re.compile(r"^[^@\s<>,;]+@[^@\s<>,;]+\.[^@\s<>,;]+$")
 
 
-def load_config(env_path):
-    """Read KEY=VALUE lines from .env; real environment variables win."""
+def load_config(env_path, keys=("GMAIL_ADDRESS", "GMAIL_APP_PASSWORD", "SENDER_NAME")):
+    """Read KEY=VALUE lines from .env; real environment variables win for the listed keys."""
     cfg = {}
     try:
         for line in Path(env_path).read_text().splitlines():
@@ -28,7 +28,7 @@ def load_config(env_path):
             cfg[key.strip()] = value.strip().strip("\"'")
     except OSError:
         pass
-    for key in ("GMAIL_ADDRESS", "GMAIL_APP_PASSWORD", "SENDER_NAME"):
+    for key in keys:
         if os.environ.get(key):
             cfg[key] = os.environ[key]
     return cfg

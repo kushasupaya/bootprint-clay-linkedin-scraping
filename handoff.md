@@ -1,4 +1,4 @@
-Last updated: 2026-10-27
+Last updated: 2026-10-28
 
 ## Where we are
 Version 1 runs locally without Slack. `python3 server.py` serves the real history page at http://127.0.0.1:8765 for the user's ten real contacts (loaded from their `clay_new.csv`, now `data/clay_latest.csv`; no signals yet, 9 of 10 have an email). Built on top of the engine and history page:
@@ -6,7 +6,8 @@ Version 1 runs locally without Slack. `python3 server.py` serves the real histor
 - Human-approved outreach email (`outreach.py`, "Email this person" panel): editable template, confirm dialog, one email per signal, Gmail SMTP. **No real email has been sent yet: no `.env` exists.**
 - `python3 demo.py` (port 8766): 17 people (10 real names with invented moves, 7 invented), simulated sending, Demo controls (simulate job/title change, reset), two live finds on "Check for updates".
 - `python3 testmode.py` (port 8767): 4 invented candidates (A, A, B, C), real Gmail sending, but only to the user's own inbox via `+name` aliases. Needs `.env`.
-41 tests pass. Pages were verified with jsdom and curl, not in a real browser.
+- Slack daily digest (2026-10-28): `python3 digest.py` runs the engine, then DMs Job changes, Possible moves and "Couldn't check X" notes since the last sent digest (`slack.py` formats and sends; one retry). Verified with unit tests (fake Slack) and `--dry-run` on sample data; **never sent to real Slack**: needs `SLACK_BOT_TOKEN` and `SLACK_USER_ID` in `.env`. Not committed yet.
+56 tests pass. Pages were verified with jsdom and curl, not in a real browser.
 
 Git: work is committed as six focused commits on branch `handoff-2026-10-27` (pushed). `main` is untouched. The older `handoff-2026-10-26` branch still has one superseded squashed commit.
 
@@ -20,7 +21,7 @@ Git: work is committed as six focused commits on branch `handoff-2026-10-27` (pu
 3. Fix the Clay export: re-add a "Last Enriched" column (the 48h stale check is off without it), fill the one blank email, confirm the one LinkedIn URL whose slug doesn't match the person's name, and check why several emails use another company's domain than the listed org.
 4. Open a pull request from `handoff-2026-10-27` into `main` and merge; decide whether to delete `handoff-2026-10-26` (or approve a force-push to replace it).
 5. Read the Google Sheet directly (read-only service account, key outside git); the refresh button fetches the sheet first, then runs the engine.
-6. Slack daily digest built from the whole day's log lines (Job changes first, Possible moves separate, "Couldn't check X" notes, "nothing today", retry once), plus an approval button for outreach reusing `outreach.py`. Needs a personal Slack workspace, bot token (`chat:write`, `im:write`) and member ID in `.env`.
+6. Try the Slack digest for real: create a Slack app in a personal workspace (bot scope `chat:write`), put the token and your member ID in `.env`, run `python3 digest.py`. Then, later, an approve-outreach button reusing `outreach.py` (needs a public interactivity URL).
 7. Scheduler at 10 PM Eastern with catch-up ("late summary"); "no data at all" warning when every row is stale or missing.
 8. Tune title/org cleaning and the tier rule from real logs (tiers are recency-only; ask whether to weigh seniority or specialty).
 

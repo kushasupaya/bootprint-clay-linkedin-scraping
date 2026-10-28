@@ -8,7 +8,7 @@ Read `handoff.md` first, every session. Decisions and their reasons are in `deci
 
 A personal tool for a recruiter: watch ~5 people on LinkedIn and send one daily Slack DM when one changes jobs. The full spec is `plan.md` and the flow is `diagram.html` (Mermaid, open in a browser). Read `plan.md` before building anything new; it defines the decision rules (strict, "Possible move" for anything unclear, blank Clay data is never a change, posts older than 48h ignored, reported posts never repeated).
 
-Built so far: the local history page (manual "Check for updates" button), the Clay comparison engine (`engine.py`, fed by a local CSV, not live Clay yet), candidate briefs with A/B/C tiers, human-approved outreach email, and demo and test modes. Not built yet: live Clay delivery, Slack digest (and Slack approval of outreach), 10 PM Eastern scheduler. Build order the user chose: website, then Clay, then Slack.
+Built so far: the local history page (manual "Check for updates" button), the Clay comparison engine (`engine.py`, fed by a local CSV, not live Clay yet), candidate briefs with A/B/C tiers, human-approved outreach email, demo and test modes, and the Slack daily digest (`digest.py`, `slack.py`). Not built yet: live Clay delivery, Slack approval of outreach, 10 PM Eastern scheduler. Build order the user chose: website, then Clay, then Slack.
 
 The Gmail/LinkedIn-email posts path is dropped for now: the user checked and LinkedIn offers no email option for these notifications (job-change notifications are in-app/push only, which code can't read). Do not scrape LinkedIn. Job changes come from Clay only; revisit posts only if Clay can return post text.
 
@@ -17,13 +17,14 @@ The Gmail/LinkedIn-email posts path is dropped for now: the user checked and Lin
 - Run the history page: `python3 server.py` (set `PORT=` to use another port; restart it after editing Python files), then open http://127.0.0.1:8765 (stdlib only, no install step, no linter).
 - Run the engine: `python3 engine.py [--clay FILE] [--root DIR]`. It appends to `logs/run.log` and rewrites `data/memory.json`, so trial it on a copy with `--root` (sample input: `sample/clay_latest.json`).
 - Tests: `python3 -I -m unittest discover -s tests -v`; one test: `python3 -I -m unittest tests.test_engine.Evaluate.test_clay_error`.
+- Send the Slack digest: `python3 digest.py [--root DIR] [--no-engine] [--dry-run] [--late]` (runs the engine first, then DMs what changed since the last sent digest; `--dry-run` prints instead of sending, so trial it with `--root` on a copy).
 - Syntax-check the frontend: `node --check web/app.js`.
 
 ## Architecture
 
 The engine writes and the page reads through these files; the server calls the engine only for the manual refresh:
 
-- `logs/run.log` is the source of truth for history. One line per event: `time | person | source | decision | what happened | link (optional)`. Time is `YYYY-MM-DD HH:MM:SS`. `person` is `-` for run-level lines. `source` is Post, Profile, Run or Email. `decision` is one of Job change, Possible move, Ignored, No change, Skipped, Error, Info. Every line about a person must carry their exact name, because `server.py` groups events by matching it to the watchlist name.
+- `logs/run.log` is the source of truth for history. One line per event: `time | person | source | decision | what happened | link (optional)`. Time is `YYYY-MM-DD HH:MM:SS`. `person` is `-` for run-level lines. `source` is Post, Profile, Run, Email or Slack. `decision` is one of Job change, Possible move, Ignored, No change, Skipped, Error, Info. Every line about a person must carry their exact name, because `server.py` groups events by matching it to the watchlist name.
 - `data/memory.json` is the last-known title, company, `email` (from Clay), `data_as_of` and `last_checked` per person, keyed by slug (lowercase name, hyphens).
 - `watchlist.json` lists who is watched (name, company, LinkedIn URL). It is hand-edited by the user. It is deliberately not fed from Clay; Clay supplies current title and company, joined to the watchlist by LinkedIn URL.
 
@@ -48,6 +49,10 @@ The page only reads, with exceptions (refresh, outreach send, and demo-mode endp
 ## Outreach email (human in the loop)
 
 When a person has a Job change or Possible move, the page shows an "Email this person" panel. `outreach.py` fills a template draft; the user edits it and clicks Send, which POSTs `/api/outreach/send` (same page-only guard as refresh, one send at a time). The recipient is read from `data/memory.json` (`email`, filled from Clay's Email column; a blank value never erases a saved one), never from the request. Sending uses Gmail SMTP with `GMAIL_ADDRESS`, `GMAIL_APP_PASSWORD`, `SENDER_NAME` in `.env` (see `.env.example`). A send is logged as `Email | Info | Sent "subject" to addr` (failures as `Email | Error`); one email per signal, detected from that log line. Nothing is ever sent automatically. The Slack version of this approval is not built; reuse `outreach.py` for it.
+
+## Slack digest
+
+`digest.py` runs the engine, then `collect()` reads `logs/run.log` for every Job change / Possible move logged after the last `Slack | Info | Sent daily digest` line (first ever: last 7 days), plus "Couldn't check X" notes for people whose newest Profile line in that window is Skipped/Error. `slack.py` formats it (Job changes first, Possible moves in a separate section, a "nothing today" message otherwise, "Late summary." with `--late`) and posts with `chat.postMessage` to `SLACK_USER_ID` using `SLACK_BOT_TOKEN` (both in `.env`, stdlib `urllib`). A failed send is retried once, then logged as `Slack | Error`; because only a sent line moves the window, the next run re-includes those signals. Slack is alerts only: the log and the page stay the record. No button to approve outreach from Slack yet (that needs a public interactivity URL).
 
 ## Things to know
 
