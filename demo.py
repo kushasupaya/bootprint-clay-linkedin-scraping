@@ -7,6 +7,7 @@ In the demo, clicking "Check for updates" finds two new Job changes live, and th
 page can simulate a job change or title change for anyone, or reset the demo. Its "Slack alert" button previews the
 digest and can really send it to your own Slack DM (SLACK_USER_ID in .env, marked [Demo]); nobody else is reachable.
 Three invented candidates (example.org addresses) are added alongside your real watchlist.
+Run: python3 demo.py --invented    for a roster with no real names or addresses at all (for screenshots and slides).
 """
 import csv
 import json
@@ -38,6 +39,18 @@ EXTRAS = [
 #   stale    days ago the Clay data was too old to compare
 #   live     (company, title) Clay shows now but memory does not; "Check for updates" finds it
 # Tiers come from recency: A = Job change within 7 days, B = older Job change or recent Possible move, C = older Possible move.
+# Used by --invented in place of the real watchlist, in the same positions the SCENARIOS below point at.
+INVENTED_ROSTER = [
+    ("Priya Raman", "Larkspur Veterinary Clinic", "Veterinary Surgeon", "priya.raman@example.org"),
+    ("Tom Okafor", "Fernhill Animal Hospital", "Senior Veterinary Surgeon", "tom.okafor@example.org"),
+    ("Hannah Lindqvist", "Northgate Pet Care", "Veterinary Surgeon", "hannah.lindqvist@example.org"),
+    ("Diego Marin", "Willowbrook Animal Clinic", "Veterinary Surgeon, Medical Director", "diego.marin@example.org"),
+    ("Grace Holloway", "Ashford Veterinary Group", "Veterinary Surgeon", "grace.holloway@example.org"),
+    ("Owen Park", "Birchwood Specialty Vets", "Staff Surgeon", "owen.park@example.org"),
+    ("Nadia Petrov", "Clearwater Animal Health", "Veterinary Surgeon", ""),
+    ("Ben Achterberg", "Oakmont Veterinary Hospital", "Small Animal Surgeon", "ben.achterberg@example.org"),
+]
+
 SCENARIOS = [
     {"who": 0, "kind": "Job change", "days": 1, "company": "Evergreen Animal Specialists"},
     {"who": "Dana Whitfield", "kind": "Job change", "days": 1, "company": "Cascadia Veterinary Referral", "title": "Board-Certified Veterinary Surgeon"},
@@ -57,10 +70,17 @@ def stamp(t):
     return t.strftime("%Y-%m-%d %H:%M:%S")
 
 
-def load_clay_rows():
-    """The user's Clay export, by name, plus a row for each invented extra."""
-    with (HERE / "data" / "clay_new.csv").open(newline="", encoding="utf-8-sig") as f:
-        rows = {r["Full Name"].strip(): r for r in csv.DictReader(f)}
+def load_clay_rows(invented=False):
+    """The user's Clay export, by name (or the invented roster), plus a row for each invented extra."""
+    if invented:
+        rows = {}
+        for name, company, title, email in INVENTED_ROSTER:
+            rows[name] = {"Full Name": name, "First Name": name.split()[0], "Last Name": name.split()[-1],
+                          "LinkedIn": f"https://www.linkedin.com/in/{slugify(name)}-demo",
+                          "Current Title": title, "Current Org": company, "Email": email}
+    else:
+        with (HERE / "data" / "clay_new.csv").open(newline="", encoding="utf-8-sig") as f:
+            rows = {r["Full Name"].strip(): r for r in csv.DictReader(f)}
     for name, company, title, email in EXTRAS:
         rows[name] = {"Full Name": name, "First Name": name.split()[0], "Last Name": name.split()[-1],
                       "LinkedIn": f"https://www.linkedin.com/in/{slugify(name)}-demo",
@@ -151,14 +171,17 @@ def write_log(now, watchlist, rows, moves, emailed, stale):
     (DEMO / "logs" / "run.log").write_text("\n".join(l for _, l in lines) + "\n")
 
 
-def build():
+def build(invented=False):
     now = datetime.now().replace(microsecond=0)
     if DEMO.exists():
         shutil.rmtree(DEMO)
     (DEMO / "data").mkdir(parents=True)
     (DEMO / "logs").mkdir()
 
-    watchlist = json.loads((HERE / "watchlist.json").read_text())
+    if invented:
+        watchlist = [{"name": n, "company": c, "linkedin_url": f"https://www.linkedin.com/in/{slugify(n)}-demo"} for n, c, _, _ in INVENTED_ROSTER]
+    else:
+        watchlist = json.loads((HERE / "watchlist.json").read_text())
     real_count = len(watchlist)
     watchlist += [{"name": n, "company": c, "linkedin_url": f"https://www.linkedin.com/in/{slugify(n)}-demo"} for n, c, _, _ in EXTRAS]
     (DEMO / "watchlist.json").write_text(json.dumps(watchlist, indent=2) + "\n")
@@ -168,7 +191,7 @@ def build():
     slack_lines = [f"{k}={real_env[k]}" for k in ("SLACK_BOT_TOKEN", "SLACK_USER_ID") if real_env.get(k)]
     (DEMO / ".env").write_text("\n".join(["SENDER_NAME=Demo Recruiter", *slack_lines]) + "\n")
 
-    rows = load_clay_rows()
+    rows = load_clay_rows(invented)
     scenarios = [s for s in SCENARIOS if not isinstance(s["who"], int) or s["who"] < real_count]
     moves, emailed, stale, live = resolve(scenarios, watchlist, rows)
     write_clay_and_memory(now, watchlist, rows, moves, live)
@@ -176,7 +199,7 @@ def build():
 
 
 if __name__ == "__main__":
-    build()
+    build(invented="--invented" in sys.argv)
     os.environ.update(WATCHLIST_ROOT=str(DEMO), WATCHLIST_DEMO="1", PORT=os.environ.get("PORT", "8766"))
     import server
     import threading
