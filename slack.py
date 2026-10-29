@@ -32,11 +32,12 @@ def signal_line(item):
     return f"{head}: {esc(item['detail'])}\n_{WHY[item['decision']]}_{link}"
 
 
-def build_digest(signals, notes, late=False, page_url=""):
-    """Return (fallback_text, blocks). signals are Job change / Possible move items; notes are plain strings."""
+def build_digest(signals, notes, late=False, page_url="", demo=False):
+    """Return (fallback_text, blocks). signals are Job change / Possible move items; notes are plain strings.
+    demo=True marks the message as made-up data so it is easy to spot and delete in Slack."""
     jobs = [s for s in signals if s["decision"] == "Job change"]
     maybe = [s for s in signals if s["decision"] == "Possible move"]
-    prefix = "Late summary. " if late else ""
+    prefix = ("[Demo] " if demo else "") + ("Late summary. " if late else "")
 
     if jobs:
         headline = f"{len(jobs)} job change{'s' if len(jobs) != 1 else ''}" + (f", {len(maybe)} possible" if maybe else "")
@@ -61,6 +62,8 @@ def build_digest(signals, notes, late=False, page_url=""):
     if signals and page_url:
         blocks.append({"type": "context", "elements": [
             {"type": "mrkdwn", "text": f"Read the details and email them from the history page: {esc(page_url)}"}]})
+    if demo:
+        blocks.append({"type": "context", "elements": [{"type": "mrkdwn", "text": "Demo data: these changes are made up."}]})
     return text, blocks
 
 

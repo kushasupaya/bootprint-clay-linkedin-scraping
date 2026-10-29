@@ -1,6 +1,7 @@
 import io
 import json
 import sys
+import tempfile
 import unittest
 import urllib.error
 from datetime import datetime
@@ -29,24 +30,47 @@ class Collect(unittest.TestCase):
             ev("2026-10-27 22:05:00", "-", "Slack", "Info", "Sent daily digest (1 job change, 0 possible, 0 notes)"),
             JOB,
         ]
-        signals, notes = digest.collect(events, WATCH, MEM, NOW)
+        signals, notes, _ = digest.collect(events, WATCH, MEM, NOW)
         self.assertEqual([s["name"] for s in signals], ["Sarah Chen"])
         self.assertEqual(signals[0]["company"], "Globex")  # memory wins over the watchlist company
         self.assertEqual(notes, [])
 
     def test_failed_send_is_not_a_sent_digest(self):
         events = [JOB, ev("2026-10-28 22:01:00", "-", "Slack", "Error", "Could not send daily digest: Slack said: invalid_auth")]
-        signals, _ = digest.collect(events, WATCH, MEM, NOW)
+        signals = digest.collect(events, WATCH, MEM, NOW)[0]
         self.assertEqual(len(signals), 1)
 
-    def test_first_digest_looks_back_a_week_only(self):
-        old = ev("2026-10-01 10:00:00", "Raj Patel", "Profile", "Job change", "Company changed from Helio to Zed")
-        signals, _ = digest.collect([old, JOB], WATCH, MEM, NOW)
+    def test_signals_older_than_48_hours_are_left_out_not_dropped(self):
+        old = ev("2026-10-25 10:00:00", "Raj Patel", "Profile", "Job change", "Company changed from Helio to Zed")
+        signals, _, left_out = digest.collect([old, JOB], WATCH, MEM, NOW)
         self.assertEqual([s["name"] for s in signals], ["Sarah Chen"])
+        self.assertEqual(left_out, ["Raj Patel"])
+
+    def test_exactly_48_hours_still_counts(self):
+        edge = ev("2026-10-26 22:00:00", "Raj Patel", "Profile", "Job change", "Company changed from Helio to Zed")
+        just_over = ev("2026-10-26 21:59:59", "Sarah Chen", "Profile", "Possible move", "Title changed from A to B. Same company.")
+        signals, _, left_out = digest.collect([just_over, edge], WATCH, MEM, NOW)
+        self.assertEqual([s["name"] for s in signals], ["Raj Patel"])
+        self.assertEqual(left_out, ["Sarah Chen"])
+
+    def test_already_reported_old_signals_are_not_left_out_again(self):
+        old = ev("2026-10-20 10:00:00", "Raj Patel", "Profile", "Job change", "Company changed from Helio to Zed")
+        sent = ev("2026-10-21 22:00:00", "-", "Slack", "Info", "Sent daily digest (1 job change, 0 possible, 0 notes)")
+        self.assertEqual(digest.collect([old, sent], WATCH, MEM, NOW)[2], [])
+
+    def test_left_out_lists_each_person_once(self):
+        a = ev("2026-10-24 10:00:00", "Raj Patel", "Profile", "Possible move", "Title changed from A to B. Same company.")
+        b = ev("2026-10-25 10:00:00", "Raj Patel", "Profile", "Job change", "Company changed from Helio to Zed")
+        self.assertEqual(digest.collect([a, b], WATCH, MEM, NOW)[2], ["Raj Patel"])
+
+    def test_old_couldnt_check_note_is_not_repeated(self):
+        old_skip = ev("2026-10-24 20:00:00", "Raj Patel", "Profile", "Skipped", "Clay returned blank data.")
+        self.assertEqual(digest.collect([old_skip], WATCH, MEM, NOW)[1], [])
 
     def test_people_off_the_watchlist_are_ignored(self):
         other = ev("2026-10-28 21:00:00", "Nobody Known", "Profile", "Job change", "Company changed from A to B")
         self.assertEqual(digest.collect([other], WATCH, MEM, NOW)[0], [])
+        self.assertEqual(digest.collect([other], WATCH, MEM, NOW)[2], [])
 
     def test_couldnt_check_note_clears_after_a_good_check(self):
         skipped = ev("2026-10-28 20:00:00", "Raj Patel", "Profile", "Skipped", "Clay returned blank data.")
@@ -85,6 +109,46 @@ class Build(unittest.TestCase):
     def test_non_http_link_is_dropped(self):
         line = slack.signal_line({**self.item, "link": "javascript:x|y"})
         self.assertNotIn("javascript", line)
+
+
+class Demo(unittest.TestCase):
+    def test_demo_digest_is_marked(self):
+        text, blocks = slack.build_digest([Build.item], [], demo=True)
+        self.assertTrue(text.startswith("[Demo] "))
+        self.assertIn("these changes are made up", json.dumps(blocks))
+
+    def test_real_digest_is_not_marked(self):
+        text, blocks = slack.build_digest([Build.item], [])
+        self.assertNotIn("Demo", text + json.dumps(blocks))
+
+    def test_compose_and_sent_line_round_trip(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "logs").mkdir()
+            (root / "watchlist.json").write_text(json.dumps(WATCH))
+            (root / "logs" / "run.log").write_text(
+                "2026-10-28 21:00:00 | Sarah Chen | Profile | Job change | Company changed from Acme to Globex | https://linkedin.com/in/sarah-chen\n")
+            result = digest.compose(root, NOW, demo=True)
+            self.assertEqual(result.text, "[Demo] Watchlist: 1 job change")
+            line = digest.sent_line(result.signals, result.notes) + " (demo)"
+            with (root / "logs" / "run.log").open("a") as f:
+                f.write(f"2026-10-28 21:05:00 | - | Slack | Info | {line}\n")
+            # Once the digest is logged as sent, the same change is not reported again.
+            self.assertEqual(digest.compose(root, NOW).signals, [])
+
+    def test_only_stale_news_means_nothing_today_and_a_log_line(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "logs").mkdir()
+            (root / "watchlist.json").write_text(json.dumps(WATCH))
+            (root / "logs" / "run.log").write_text(
+                "2026-10-20 21:00:00 | Raj Patel | Profile | Job change | Company changed from Helio to Zed | https://linkedin.com/in/raj\n")
+            result = digest.compose(root, NOW)
+            self.assertEqual(result.text, "Watchlist: Nothing today")
+            self.assertEqual(result.left_out, ["Raj Patel"])
+            self.assertEqual(
+                digest.left_out_line(result.left_out),
+                "Left 1 change out of the digest (older than 48 hours, still on the page): Raj Patel")
 
 
 class FakeResponse(io.BytesIO):
