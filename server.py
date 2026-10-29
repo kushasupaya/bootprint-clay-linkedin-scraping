@@ -14,8 +14,10 @@ from datetime import date, datetime, timedelta
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import digest
 import engine
 import outreach
+import slack
 from brief import build_brief
 from common import slugify
 
@@ -34,6 +36,8 @@ HOST, PORT = "127.0.0.1", int(os.environ.get("PORT", 8765))
 ALLOWED_HOSTS = {f"127.0.0.1:{PORT}", f"localhost:{PORT}"}
 REFRESH_LOCK = threading.Lock()
 SEND_LOCK = threading.Lock()
+SLACK_LOCK = threading.Lock()
+SLACK_KEYS = ("SLACK_BOT_TOKEN", "SLACK_USER_ID")
 MAX_REQUEST = 20000
 TIER_ORDER = {"A": 0, "B": 1, "C": 2}
 DEMO_COMPANIES = ["Summit Veterinary Partners", "Bluewater Animal Specialists", "Redwood Pet Health", "Keystone Veterinary Group", "Harborview Animal Hospital"]
@@ -156,6 +160,9 @@ class Handler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=str(WEB), **kwargs)
 
     def do_GET(self):
+        if DEMO and self.path.split("?")[0] == "/api/demo/slack":
+            self.demo_slack_preview()
+            return
         if self.path.split("?")[0] == "/api/data":
             body = json.dumps(build_data()).encode()
             self.send_response(200)
@@ -191,11 +198,14 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         path = self.path.split("?")[0]
-        allowed = ("/api/refresh", "/api/outreach/send") + (("/api/demo/simulate", "/api/demo/reset") if DEMO else ())
+        allowed = ("/api/refresh", "/api/outreach/send") + (("/api/demo/simulate", "/api/demo/reset", "/api/demo/slack") if DEMO else ())
         if path not in allowed:
             self.send_error(405, "Not allowed")
             return
         if not self.same_page_only():
+            return
+        if path == "/api/demo/slack":
+            self.demo_slack_send()
             return
         if path.startswith("/api/demo/"):
             self.demo_action(path)
@@ -218,6 +228,39 @@ class Handler(SimpleHTTPRequestHandler):
             "flagged": [{"name": n, "decision": d, "detail": det} for n, d, det, _ in result["flagged"]],
             "notes": result["notes"],
         })
+
+    def demo_slack_message(self):
+        """What the Slack digest would say right now, built from the demo log. Marked [Demo] so it is easy to spot."""
+        return digest.compose(ROOT, datetime.now(), page_url=f"http://{HOST}:{PORT}", demo=True)
+
+    def demo_slack_preview(self):
+        """Demo mode only, read-only: the message the digest would send, for the page to draw."""
+        msg = self.demo_slack_message()
+        cfg = outreach.load_config(ROOT / ".env", SLACK_KEYS)
+        self.send_json(200, {"text": msg.text, "blocks": msg.blocks, "signals": len(msg.signals), "notes": len(msg.notes),
+                             "left_out": len(msg.left_out),
+                             "can_send": bool(cfg.get("SLACK_BOT_TOKEN") and cfg.get("SLACK_USER_ID"))})
+
+    def demo_slack_send(self):
+        """Demo mode only: really DM the demo digest to the user's own Slack (SLACK_USER_ID from .env, never from the request)."""
+        if not SLACK_LOCK.acquire(blocking=False):
+            self.send_json(409, {"ok": False, "error": "A Slack message is already being sent. Try again in a moment."})
+            return
+        try:
+            msg = self.demo_slack_message()
+            log = engine.RunLog(ROOT / "logs" / "run.log")
+            try:
+                slack.post_message(outreach.load_config(ROOT / ".env", SLACK_KEYS), msg.text, msg.blocks)
+            except slack.SlackError as e:
+                log.write("-", "Slack", "Error", f"Could not send daily digest: {e}")
+                self.send_json(502, {"ok": False, "error": str(e)})
+                return
+            log.write("-", "Slack", "Info", digest.sent_line(msg.signals, msg.notes) + " (demo)")
+            if msg.left_out:
+                log.write("-", "Slack", "Info", digest.left_out_line(msg.left_out))
+            self.send_json(200, {"ok": True, "text": msg.text})
+        finally:
+            SLACK_LOCK.release()
 
     def demo_action(self, path):
         """Demo mode only: fake a new move for someone (so the presenter can show the page react), or reset the demo."""
