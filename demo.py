@@ -179,5 +179,22 @@ if __name__ == "__main__":
     build()
     os.environ.update(WATCHLIST_ROOT=str(DEMO), WATCHLIST_DEMO="1", PORT=os.environ.get("PORT", "8766"))
     import server
+    import threading
+    import time
+
+    def watch_approvals():
+        """Notice green checks on the demo's draft DMs. Pretend sends only: demo=True never reaches Gmail."""
+        import approvals
+        import engine
+        cfg = outreach.load_config(DEMO / ".env", ("SLACK_BOT_TOKEN", "SLACK_USER_ID"))
+        log = engine.RunLog(DEMO / "logs" / "run.log")
+        while True:
+            try:
+                approvals.process(DEMO, cfg, log, demo=True)
+            except Exception as e:  # keep the demo alive whatever Slack does
+                print(f"Approval check failed: {type(e).__name__}")
+            time.sleep(10)
+
+    threading.Thread(target=watch_approvals, daemon=True).start()
     print(f"Demo built in {DEMO}. Try 'Check for updates' and the Demo controls on the page.")
     server.ThreadingHTTPServer((server.HOST, server.PORT), server.Handler).serve_forever()

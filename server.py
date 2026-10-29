@@ -14,6 +14,7 @@ from datetime import date, datetime, timedelta
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import approvals
 import digest
 import engine
 import outreach
@@ -258,7 +259,10 @@ class Handler(SimpleHTTPRequestHandler):
             log.write("-", "Slack", "Info", digest.sent_line(msg.signals, msg.notes) + " (demo)")
             if msg.left_out:
                 log.write("-", "Slack", "Info", digest.left_out_line(msg.left_out))
-            self.send_json(200, {"ok": True, "text": msg.text})
+            # Two demo draft DMs to approve with a green check; approving only logs a pretend send (see demo.py).
+            cfg = outreach.load_config(ROOT / ".env", SLACK_KEYS + ("SENDER_NAME",))
+            offered = approvals.offer(ROOT, cfg, msg.signals, log, demo=True, limit=2)
+            self.send_json(200, {"ok": True, "text": msg.text, "drafts": offered})
         finally:
             SLACK_LOCK.release()
 

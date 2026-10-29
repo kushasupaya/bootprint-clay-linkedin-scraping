@@ -13,10 +13,11 @@ from pathlib import Path
 SMTP_HOST, SMTP_PORT = "smtp.gmail.com", 465
 PLACEHOLDER = "[Your name]"
 MAX_BODY = 5000
+CONFIG_KEYS = ("GMAIL_ADDRESS", "GMAIL_APP_PASSWORD", "SENDER_NAME")
 EMAIL_RE = re.compile(r"^[^@\s<>,;]+@[^@\s<>,;]+\.[^@\s<>,;]+$")
 
 
-def load_config(env_path, keys=("GMAIL_ADDRESS", "GMAIL_APP_PASSWORD", "SENDER_NAME")):
+def load_config(env_path, keys=CONFIG_KEYS):
     """Read KEY=VALUE lines from .env; real environment variables win for the listed keys."""
     cfg = {}
     try:

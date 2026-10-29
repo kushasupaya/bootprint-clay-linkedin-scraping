@@ -2,6 +2,7 @@
 
 Reads:  logs/run.log, data/memory.json, watchlist.json, .env (SLACK_BOT_TOKEN, SLACK_USER_ID)
 Writes: logs/run.log (a "Slack" line per send; the engine's lines when it runs)
+Also offers each emailable change as a draft DM to approve with a green check (approvals.py).
 Run:    python3 digest.py [--root DIR] [--clay FILE] [--no-engine] [--dry-run] [--late]
 
 The digest covers every Job change / Possible move logged after the last digest that was actually
@@ -16,6 +17,7 @@ from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
 
+import approvals
 import engine
 import outreach
 import slack
@@ -64,7 +66,7 @@ def collect(events, watchlist, memory, now):
         if e["time"] < cutoff and e["decision"] in engine.SIGNALS and slugify(e["person"]) in watched
     ))
     signals = [
-        {"name": e["person"], "decision": e["decision"], "detail": e["detail"], "link": e["link"],
+        {"name": e["person"], "decision": e["decision"], "detail": e["detail"], "link": e["link"], "time": e["time"],
          "company": memory.get(slugify(e["person"]), {}).get("company") or companies[slugify(e["person"])]}
         for e in window
         if e["decision"] in engine.SIGNALS and slugify(e["person"]) in watched
@@ -134,8 +136,9 @@ def main():
             print(left_out_line(result.left_out))
         return
 
+    cfg = outreach.load_config(root / ".env", outreach.CONFIG_KEYS + approvals.SLACK_KEYS)
     try:
-        slack.post_message(outreach.load_config(root / ".env", ("SLACK_BOT_TOKEN", "SLACK_USER_ID")), text, blocks)
+        slack.post_message(cfg, text, blocks)
     except slack.SlackError as e:
         log.write("-", "Slack", "Error", f"Could not send daily digest: {e}")
         print(f"Could not send the digest: {e}", file=sys.stderr)
@@ -144,6 +147,10 @@ def main():
     if result.left_out:
         log.write("-", "Slack", "Info", left_out_line(result.left_out))
     print(f"Sent: {text}")
+    # One draft DM per person with an email; react with a green check to send it (see approvals.py).
+    offered = approvals.offer(root, cfg, signals, log)
+    if offered:
+        print(f"Offered {offered} email draft{'s' if offered != 1 else ''} for approval in Slack. Run: python3 approvals.py --watch")
 
 
 if __name__ == "__main__":
