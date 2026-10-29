@@ -82,8 +82,9 @@ function renderRoster() {
     const btn = el(
       "button",
       {
-        class: "person",
+        class: "person" + (sig && toneOf(sig.decision) ? " sig-" + toneOf(sig.decision) : ""),
         type: "button",
+        title: p.name,
         "aria-current": p.slug === state.selected ? "true" : "false",
         onclick: () => select(p.slug, true),
       },
@@ -375,6 +376,85 @@ async function refresh() {
   }
 }
 
+// Slack's text markup (*bold*, _italic_, <url|label>, &amp; &lt; &gt;) as DOM nodes. Never innerHTML.
+function slackInline(md) {
+  const unescape = (s) => s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+  const re = /\*([^*\n]+)\*|_([^_\n]+)_|<(https?:\/\/[^|>\s]+)\|([^>\n]+)>/g;
+  const nodes = [];
+  let last = 0;
+  let m;
+  while ((m = re.exec(md))) {
+    if (m.index > last) nodes.push(unescape(md.slice(last, m.index)));
+    if (m[1] !== undefined) nodes.push(el("strong", {}, unescape(m[1])));
+    else if (m[2] !== undefined) nodes.push(el("em", {}, unescape(m[2])));
+    else nodes.push(el("a", { href: m[3], target: "_blank", rel: "noopener noreferrer" }, unescape(m[4])));
+    last = re.lastIndex;
+  }
+  if (last < md.length) nodes.push(unescape(md.slice(last)));
+  return nodes;
+}
+
+function slackBlock(b) {
+  if (b.type === "header") return el("h3", { class: "slack-head" }, b.text.text);
+  if (b.type === "context") return el("p", { class: "slack-context" }, b.elements.map((e) => slackInline(e.text)));
+  return el("div", { class: "slack-section" }, b.text.text.split("\n").map((line) => (line ? el("p", {}, slackInline(line)) : el("div", { class: "slack-gap" }))));
+}
+
+// Demo mode only: preview the Slack digest the engine would send, and really DM it to the user's own Slack.
+function setupSlackDemo() {
+  const overlay = document.getElementById("slack-overlay");
+  const body = document.getElementById("slack-body");
+  const sendBtn = document.getElementById("slack-send");
+  const closeBtn = document.getElementById("slack-close");
+  const status = document.getElementById("slack-status");
+  const note = document.getElementById("slack-note");
+  const opener = document.getElementById("demo-slack");
+  const headers = { "X-Requested-With": "watchlist-page", "Content-Type": "application/json" };
+
+  const close = () => {
+    overlay.hidden = true;
+    opener.focus();
+  };
+  async function open() {
+    status.textContent = "";
+    try {
+      const res = await fetch("/api/demo/slack", { cache: "no-store" });
+      if (!res.ok) throw new Error();
+      const msg = await res.json();
+      body.replaceChildren(...msg.blocks.map(slackBlock));
+      note.hidden = !msg.left_out;
+      note.textContent = `${msg.left_out} older change${msg.left_out === 1 ? " is" : "s are"} not in this message (over 48 hours old). ${msg.left_out === 1 ? "It stays" : "They stay"} on the page with ${msg.left_out === 1 ? "its tier" : "their tiers"}.`;
+      sendBtn.disabled = !msg.can_send;
+      sendBtn.textContent = "Send to my Slack";
+      if (!msg.can_send) status.textContent = "Add SLACK_BOT_TOKEN and SLACK_USER_ID to .env, then run python3 demo.py again.";
+    } catch {
+      body.replaceChildren(el("p", {}, "Couldn't build the Slack message."));
+      note.hidden = true;
+      sendBtn.disabled = true;
+    }
+    overlay.hidden = false;
+    closeBtn.focus();
+  }
+  opener.addEventListener("click", open);
+  closeBtn.addEventListener("click", close);
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !overlay.hidden) close(); });
+  sendBtn.addEventListener("click", async () => {
+    sendBtn.disabled = true;
+    status.textContent = "Sending…";
+    try {
+      const res = await fetch("/api/demo/slack", { method: "POST", headers, body: "{}" });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok || !out.ok) throw new Error(out.error || "That didn't work.");
+      status.textContent = "Sent. Check your Slack DMs. The next alert will only show new changes.";
+      sendBtn.textContent = "Sent";
+    } catch (err) {
+      status.textContent = err.message;
+      sendBtn.disabled = false;
+    }
+  });
+}
+
 // Demo mode only: fake a new move for someone, or reset, so the page can be shown reacting.
 function setupDemo() {
   const panel = document.getElementById("demo-panel");
@@ -425,7 +505,49 @@ function setupDemo() {
   });
 }
 
+// Light/dark toggle. index.html already set data-theme from the saved choice or the system setting.
+function setupTheme() {
+  const btn = document.getElementById("theme-toggle");
+  const root = document.documentElement;
+  const show = () => btn.setAttribute("aria-pressed", String(root.dataset.theme === "dark"));
+  btn.addEventListener("click", () => {
+    const next = root.dataset.theme === "dark" ? "light" : "dark";
+    root.dataset.theme = next;
+    try { localStorage.setItem("theme", next); } catch { /* private mode: the choice just won't be remembered */ }
+    show();
+  });
+  show();
+}
+
+// Collapse the people list to a rail of avatars (desktop only; phones already switch between list and person).
+function setupListToggle() {
+  const btn = document.getElementById("list-toggle");
+  const apply = (collapsed) => {
+    layout.dataset.list = collapsed ? "collapsed" : "open";
+    const label = collapsed ? "Show people list" : "Hide people list";
+    btn.setAttribute("aria-expanded", String(!collapsed));
+    btn.setAttribute("aria-label", label);
+    btn.title = label;
+  };
+  let saved = null;
+  try { saved = localStorage.getItem("list"); } catch { /* private mode */ }
+  apply(saved === "collapsed");
+  btn.addEventListener("click", () => {
+    const collapsed = layout.dataset.list !== "collapsed";
+    if (collapsed && state.query) {
+      // The search box is hidden in the rail, so don't leave it filtering the list.
+      state.query = "";
+      searchEl.value = "";
+      renderRoster();
+    }
+    apply(collapsed);
+    try { localStorage.setItem("list", collapsed ? "collapsed" : "open"); } catch { /* private mode */ }
+  });
+}
+
 async function init() {
+  setupTheme();
+  setupListToggle();
   layout.dataset.view = "roster";
   refreshBtn.addEventListener("click", refresh);
   try {
@@ -445,7 +567,10 @@ async function init() {
   const banner = document.getElementById("demo-banner");
   banner.textContent = state.data.banner;
   banner.hidden = !state.data.banner;
-  if (state.data.demo) setupDemo();
+  if (state.data.demo) {
+    setupDemo();
+    setupSlackDemo();
+  }
   renderRunInfo();
   const flagged = state.data.people.find((p) => p.latest_signal);
   state.selected = (flagged || state.data.people[0]).slug;

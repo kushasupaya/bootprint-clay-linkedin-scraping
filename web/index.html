@@ -3,12 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light">
+  <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#3d5afe">
   <title>Watchlist</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    // Set the theme before the page paints, so dark mode does not flash light first.
+    (function () {
+      var saved = null;
+      try { saved = localStorage.getItem("theme"); } catch (e) {}
+      var dark = saved ? saved === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.dataset.theme = dark ? "dark" : "light";
+    })();
+  </script>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -17,6 +26,12 @@
       <h1>Watchlist</h1>
       <div class="top-actions">
         <p class="runinfo" id="runinfo"></p>
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Dark mode" title="Toggle dark mode" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path class="bulb-lit" d="M12 2a7 7 0 0 0-4 12.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26A7 7 0 0 0 12 2zM9 20.5h6M10 23h4" />
+            <path class="bulb-unlit" d="M12 2a7 7 0 0 0-4 12.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26A7 7 0 0 0 12 2zM9 20.5h6M10 23h4" />
+          </svg>
+        </button>
         <button class="refresh" id="refresh" type="button">Check for updates</button>
       </div>
     </div>
@@ -30,21 +45,45 @@
     <select id="demo-person" aria-label="Person"></select>
     <button class="demo-btn" id="demo-job" type="button">Simulate job change</button>
     <button class="demo-btn" id="demo-title" type="button">Simulate title change</button>
+    <button class="demo-btn" id="demo-slack" type="button">Slack alert</button>
     <button class="demo-btn ghost" id="demo-reset" type="button">Reset demo</button>
     <span class="demo-status" id="demo-status" role="status" aria-live="polite"></span>
   </section>
 
   <main class="layout" id="layout">
     <section class="roster" aria-label="People you watch">
-      <label class="search">
-        <span class="sr">Search people</span>
-        <input id="search" type="search" placeholder="Search by name or company" autocomplete="off">
-      </label>
+      <div class="roster-head">
+        <label class="search">
+          <span class="sr">Search people</span>
+          <input id="search" type="search" placeholder="Search by name or company" autocomplete="off">
+        </label>
+        <button class="list-toggle" id="list-toggle" type="button" aria-controls="people" aria-expanded="true" aria-label="Hide people list" title="Hide people list">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" /></svg>
+        </button>
+      </div>
       <ul class="people" id="people"></ul>
     </section>
 
     <section class="case" id="case" aria-live="polite"></section>
   </main>
+
+  <div class="slack-overlay" id="slack-overlay" hidden>
+    <div class="slack-card" role="dialog" aria-modal="true" aria-label="Slack message preview">
+      <div class="slack-top">
+        <span class="slack-app" aria-hidden="true">JW</span>
+        <strong>Job Watch</strong>
+        <span class="slack-chip">APP</span>
+        <span class="slack-time">just now</span>
+      </div>
+      <div class="slack-body" id="slack-body"></div>
+      <p class="slack-note" id="slack-note" hidden></p>
+      <div class="slack-actions">
+        <button class="demo-btn" id="slack-send" type="button">Send to my Slack</button>
+        <button class="demo-btn ghost" id="slack-close" type="button">Close</button>
+        <span class="demo-status" id="slack-status" role="status" aria-live="polite"></span>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>
