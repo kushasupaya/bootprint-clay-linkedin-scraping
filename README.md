@@ -14,7 +14,7 @@ Every day it compares each person's current company and job title, supplied by [
 | Test mode: 4 invented candidates, real emails to your own inbox (`python3 testmode.py`) | Working, needs `.env` |
 | Candidate brief and A/B/C priority tier on the page | Working |
 | Outreach email from the page (you review, edit and click Send; Gmail SMTP) | Working, needs an Email column in Clay and `.env` |
-| Outreach approval in Slack | Not built |
+| Outreach approval in Slack (react with a green check; `python3 approvals.py --watch`) | Built, untested against real Slack and Gmail; needs the `reactions:read` scope |
 | Reading the Google Sheet live | Not built |
 | Slack daily summary | Built, untested against real Slack (`python3 digest.py`; needs a Slack app token in `.env`) |
 | 10 PM Eastern scheduler | Not built |
