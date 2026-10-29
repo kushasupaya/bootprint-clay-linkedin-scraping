@@ -7,7 +7,8 @@ Version 1 runs locally without Slack. `python3 server.py` serves the real histor
 - `python3 demo.py` (port 8766): 17 people (10 real names with invented moves, 7 invented), simulated sending, Demo controls (simulate job/title change, reset), two live finds on "Check for updates".
 - `python3 testmode.py` (port 8767): 4 invented candidates (A, A, B, C), real Gmail sending, but only to the user's own inbox via `+name` aliases. Needs `.env`.
 - Slack daily digest (2026-10-28): `python3 digest.py` runs the engine, then DMs Job changes, Possible moves and "Couldn't check X" notes since the last sent digest (`slack.py` formats and sends; one retry). Verified with unit tests (fake Slack) and `--dry-run` on sample data; **never sent to real Slack**: needs `SLACK_BOT_TOKEN` and `SLACK_USER_ID` in `.env`. Not committed yet.
-56 tests pass. Pages were verified with jsdom and curl, not in a real browser.
+- Demo upgrades (2026-10-28, uncommitted): trimmed roster (13 people, 3 Tier A) with new invented moves, `demo.py` rewritten around one `SCENARIOS` table, dark mode (bulb icon toggle, grayish palette), collapsible people list (avatar rail), a 48-hour rule for Slack (changes logged more than 48 hours ago are not sent but stay on the page with their tiers), and a demo-only "Slack alert" button that previews and really sends the `[Demo]` digest to the user's own DM.
+59 tests pass. Pages were verified with jsdom and curl, not in a real browser.
 
 Git: work is committed as six focused commits on branch `handoff-2026-10-27` (pushed). `main` is untouched. The older `handoff-2026-10-26` branch still has one superseded squashed commit.
 
